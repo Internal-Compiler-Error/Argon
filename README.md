@@ -1,3 +1,4 @@
+# Argon
 Argon is a high performance downloader written in modern C++
 
 ## Design Goals
