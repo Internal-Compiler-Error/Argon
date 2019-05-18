@@ -1,0 +1,6 @@
+add_subdirectory(boost)
+add_subdirectory(boost_beast)
+add_subdirectory(gtest)
+add_subdirectory(nlohmann_json)
+add_subdirectory(gtkmm)
+add_subdirectory(network-uri)

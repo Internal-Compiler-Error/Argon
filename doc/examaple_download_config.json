@@ -1,0 +1,20 @@
+{
+  "downloads": [
+    {
+      "index": 0,
+      "path": "www.google.ca",
+      "ip": "0.0.0.0",
+      "scheme": "http",
+      "target": "index.html",
+      "progress": 0
+    },
+    {
+      "index": 1,
+      "link": "www.youtube.com",
+      "ip": "1.1.1.1",
+      "scheme": "http",
+      "target": "index (1).html",
+      "progress": 0
+    }
+  ]
+}
