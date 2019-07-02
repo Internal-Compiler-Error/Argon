@@ -1,7 +1,7 @@
 #include "argon_app.hpp"
 
-#include "download_file_chooser.hpp"
-#include "download_link_input.hpp"
+#include "download_file_chooser/download_file_chooser.hpp"
+#include "download_file_input/download_link_input.hpp"
 
 #include <gtkmm/aboutdialog.h>
 #include <gtkmm/filechooserdialog.h>

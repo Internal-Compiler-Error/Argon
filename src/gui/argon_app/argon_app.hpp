@@ -1,6 +1,6 @@
 #ifndef ARGON_ARGON_APP_HPP
 #define ARGON_ARGON_APP_HPP
-#include "../network/download_scheduler/download_scheduler.hpp"
+#include "../../network/download_scheduler/download_scheduler.hpp"
 
 #include <gtkmm/applicationwindow.h>
 #include <gtkmm/box.h>
@@ -21,8 +21,8 @@
 
 namespace net = boost::asio;
 
-#include "download_columns.hpp"
-#include "download_link_input.hpp"
+#include "download_columns/download_columns.hpp"
+#include "download_file_input/download_link_input.hpp"
 
 namespace Argon::gui {
 class argon_app : public Gtk::ApplicationWindow

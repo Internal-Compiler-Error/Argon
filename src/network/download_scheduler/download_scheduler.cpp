@@ -48,15 +48,15 @@ void download_scheduler::add_download(const download& download)
 // template <typename T>
 void download_scheduler::add_download(const std::string& link)
 {
-  auto length            = get_content_lenth();
-  int  each_section_size = length / io_contexts.size();
-
-  for (auto i = 0; i != io_contexts.size(); ++i)
-  {
-    flat_buffer                       buf;
-    http::request<http::dynamic_body> request;
-    request.set(http::field::range, std::to_string(each_section_size * (i + 1)));
-  }
+  //  auto length            = get_content_lenth();
+  //  int  each_section_size = length / io_contexts.size();
+  //
+  //  for (auto i = 0; i != io_contexts.size(); ++i)
+  //  {
+  //    flat_buffer                       buf;
+  //    http::request<http::dynamic_body> request;
+  //    request.set(http::field::range, std::to_string(each_section_size * (i + 1)));
+  //  }
 }
 
 void download_scheduler::add_download(download&& download)

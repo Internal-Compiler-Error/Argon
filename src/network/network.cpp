@@ -1,10 +1,4 @@
-#include "download_link_input.hpp"
-#include "argon_app.hpp"
-#include "download_not_supported_dialog.hpp"
-
-#include <iostream>
 #include <regex>
-#include <type_traits>
 
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -15,23 +9,18 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/beast/version.hpp>
 
-#include <gtkmm/messagedialog.h>
+#include "network.hpp"
+using namespace std;
 
-#ifndef BOOST_BEAST_EXAMPLE_COMMON_ROOT_CERTIFICATES_HPP
-#define BOOST_BEAST_EXAMPLE_COMMON_ROOT_CERTIFICATES_HPP
+namespace beast = boost::beast;
+namespace http  = beast::http;
+namespace net   = boost::asio;
+namespace ssl   = net::ssl;
+using tcp       = net::ip::tcp;
 
-#include <boost/asio/ssl.hpp>
-#include <string>
+namespace network = Argon::network;
 
-namespace ssl = boost::asio::ssl; // from <boost/asio/ssl.hpp>
-
-namespace details {
-
-// The template argument is gratuituous, to
-// allow the implementation to be header-only.
-//
-template <class = void>
-void load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
+void network::load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
 {
   std::string const cert =
       /*  This is the DigiCert root certificate.
@@ -105,142 +94,72 @@ void load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
   if (ec) return;
 }
 
-} // namespace details
-
-// Load the root certificates into an ssl::context
-//
-// This function is inline so that its easy to take
-// the address and there's nothing weird like a
-// gratuituous template argument; thus it appears
-// like a "normal" function.
-//
-
-inline void load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
+bool network::can_be_accelerated(const std::string& url, net::io_context& ioc)
 {
-  details::load_root_certificates(ctx, ec);
+  auto head = network::details::get_final_dest_HEAD(url, ioc);
+  return head.has_content_length();
 }
 
-inline void load_root_certificates(ssl::context& ctx)
+bool network::can_be_accelerated(std::string_view url)
 {
-  boost::system::error_code ec;
-  details::load_root_certificates(ctx, ec);
-  if (ec) throw boost::system::system_error{ec};
+  net::io_context ioc;
+  return can_be_accelerated(url, ioc);
+}
+bool Argon::network::can_be_accelerated(const std::string& url)
+{
+  net::io_context ioc;
+  can_be_accelerated(url, ioc);
+}
+bool Argon::network::can_be_accelerated(std::string_view url, boost::asio::io_context& ioc)
+{
+  return can_be_accelerated(string{url}, ioc);
 }
 
-#endif
-
-namespace beast = boost::beast; // from <boost/beast.hpp>
-namespace http  = beast::http;  // from <boost/beast/http.hpp>
-namespace net   = boost::asio;  // from <boost/asio.hpp>
-namespace ssl   = net::ssl;     // from <boost/asio/ssl.hpp>
-using tcp       = net::ip::tcp; // from <boost/asio/ip/tcp.hpp>
-using namespace Argon::gui;
-using namespace std;
-
-http::response<http::empty_body> get_HEAD(const string& target, net::io_context& ioc);
-http::response<http::empty_body> get_HEAD_impl(const string& target, net::io_context& ioc);
-
-download_link_input::download_link_input() : confirm_{"confirm"}, cancel_{"cancel"}
-{
-  auto screen = Gdk::Screen::get_default();
-  set_size_request(screen->get_width() / 4, screen->get_height() / 4);
-  set_title("new download");
-  set_border_width(20);
-
-  box.set_valign(Gtk::ALIGN_CENTER);
-
-  box.pack_start(entry_, Gtk::PACK_SHRINK);
-
-  box.pack_end(button_box_, Gtk::PACK_SHRINK);
-
-  button_box_.pack_start(confirm_, Gtk::PACK_EXPAND_WIDGET);
-  button_box_.pack_end(cancel_, Gtk::PACK_EXPAND_WIDGET);
-
-  confirm_.signal_clicked().connect([&]() {
-    using namespace boost;
-
-    std::string text = entry_.get_text();
-    //
-    //    // I have no idea if this is right or not
-    //    std::regex url_pattern{R"(^[a-z][a-z0-9+\-.]*://([a-z0-9\-._~%!$&'()*+,;=]+@)?([a-z0-9\-._~%]+|↵
-    //\[[a-f0-9:.]+\]|\[v[a-f0-9][a-z0-9\-._~%!$&'()*+,;=:]+\])(:[0-9]+)?↵
-    //(/[a-z0-9\-._~%!$&'()*+,;=:@]+)*/?(\?[a-z0-9\-._~%!$&'()*+,;=:@/?]*)?↵
-    //(#[a-z0-9\-._~%!$&'()*+,;=:@/?]*)?$)",
-    //                           std::regex::ECMAScript};
-    //    smatch     result;
-
-    if (auto response = get_HEAD(text, argon_app::get_instance()->scheduler.get_a_io_context());
-        !response.has_content_length())
-    {
-      cerr << "No Content-Length present from the server response, Argon cannot accelerate this download! \n";
-      download_not_supported_dialog dialog;
-      dialog.run();
-    }
-    else
-    {
-      //      cout << response << '\n';
-      //      cout << "on confirm\n";
-      argon_app::get_instance()->scheduler.add_download(network::download{text});
-    }
-  });
-
-  cancel_.signal_clicked().connect([]() { cout << "on cancel\n"; });
-
-  add(box);
-  show_all_children();
-}
-
-inline http::response<http::empty_body> get_HEAD(const string& target, net::io_context& ioc)
+http::response<http::empty_body> network::details::get_HEAD_impl(const std::string& target, net::io_context& ioc)
 {
 
-  if (auto response = get_HEAD_impl(target, ioc); response.result() == http::status::found)
-  {
-    return get_HEAD_impl(string{response.base().at(http::field::location)}, ioc);
-  }
-  else
-  {
-    return response;
-  }
-}
-http::response<http::empty_body> get_HEAD_impl(const string& target, net::io_context& ioc)
-{
-  regex host_pattern{R"([a-zA-Z]*\.*[a-zA-Z]+\.[a-zA-Z]+)"};
-  regex target_pattern{R"(\/{1}(([A-z0-9.\-_])\/*)+$)"};
-  //  vector<regex> accepted_protocols{regex{"https"}, regex{"http"}};
+  regex host_pattern{R"([a-zA-Z]*\.*[a-zA-Z]+\.[a-zA-Z]+)"}; // to extract a host from a well formed url string
+  //  regex target_pattern{R"(\/{1}(([A-z0-9.\-_])\/*)+$)"};     // to extract the target within a host
+  // todo: implement later
 
   smatch host_match; // convoluted concept in the standard library
   regex_search(target, host_match, host_pattern);
+
   string host{host_match[0].str()};
 
-  smatch target_match;
+  //  smatch target_match;
 
+  // host_match[0].second return the end iterator of the match
   string destination{host_match[0].second, target.end()};
 
   // form the HEAD request
-  http::request<http::empty_body> request;
+  beast::http::request<beast::http::empty_body> request;
   request.version(11);
-  request.method(http::verb::head);
+  request.method(beast::http::verb::head);
   request.target(destination);
-  request.set(http::field::user_agent, "Argon");
-  request.set(http::field::host, host);
+  request.set(beast::http::field::user_agent, "Argon");
+  request.set(beast::http::field::host, host);
 
   ssl::context ctx{ssl::context::tlsv12_client}; // set up ssl certificates
-  load_root_certificates(ctx);
+
+  boost::system::error_code e;
+  load_root_certificates(ctx, e);
 
   beast::ssl_stream<beast::tcp_stream> ssl_stream{ioc, ctx}; // form a stream to carry out data
 
   tcp::resolver resolver{ioc}; // get the actual endpoint of the target
-  auto const    results = resolver.resolve(host, "443");
+
+  auto const results = resolver.resolve(host, "443");
 
   beast::get_lowest_layer(ssl_stream).connect(results); // connect to it
   ssl_stream.handshake(ssl::stream_base::client);
-  http::write(ssl_stream, request);
+  beast::http::write(ssl_stream, request);
 
-  beast::flat_buffer                      buf;
-  http::response_parser<http::empty_body> res; // HEAD request has no body
-  res.skip(true);                              // tell the parser to skip body
+  beast::flat_buffer                                    buf;
+  beast::http::response_parser<beast::http::empty_body> res; // HEAD request has no body
+  res.skip(true);                                            // tell the parser to skip body
 
-  http::read(ssl_stream, buf, res); // read data
+  beast::http::read(ssl_stream, buf, res); // read data
 
   //  auto response = res.release();
   //  if (response.result() == http::status::found)
@@ -249,4 +168,20 @@ http::response<http::empty_body> get_HEAD_impl(const string& target, net::io_con
   //
   ssl_stream.shutdown();
   return res.release(); // revert control to the caller
+}
+boost::beast::http::response<boost::beast::http::empty_body>
+network::details::get_final_dest_HEAD(const std::string& target, boost::asio::io_context& ioc)
+{
+  auto head = network::details::get_HEAD_impl(target, ioc);
+
+  // 302 means resource found but redirect is needed
+  if (head.result_int() == 302)
+  {
+    auto location = head.at(http::field::location);
+    return get_final_dest_HEAD(location.to_string(), ioc);
+  }
+  else
+  {
+    return head;
+  }
 }

@@ -3,7 +3,7 @@
 
 #include <gtkmm/messagedialog.h>
 
-class download_not_supported_dialog : public Gtk::MessageDialog
+class download_not_supported_dialog final : public Gtk::MessageDialog
 {
 public:
   download_not_supported_dialog();
