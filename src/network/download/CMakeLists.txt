@@ -1,15 +1,15 @@
 add_library(argon_download "")
 target_sources(argon_download
-               PRIVATE
+        PRIVATE
         download.cpp
-               PUBLIC
+        PUBLIC
         download.hpp
-               )
+        )
 target_link_libraries(argon_download PRIVATE
-                      nlohmann_json::nlohmann_json
-                      network-uri
-                      )
+        nlohmann_json::nlohmann_json
+        #        network-uri
+        )
 target_include_directories(argon_download
-                           PUBLIC
+        PUBLIC
         .
-                           )
+        )

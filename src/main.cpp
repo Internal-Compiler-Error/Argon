@@ -6,8 +6,8 @@ int main()
 {
     Gtk::Main app;
 
-    argon_app window;
-    Gtk::Main::run(window);
+    auto window = argon_app::get_instance();
+    Gtk::Main::run(*window);
 
     return 0;
 }

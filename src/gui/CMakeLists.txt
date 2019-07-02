@@ -1,4 +1,4 @@
-add_library(argon_gui STATIC "")
+add_library(argon_gui STATIC "" download_not_supported_dialog.cpp download_not_supported_dialog.hpp)
 
 target_sources(argon_gui
                PRIVATE
@@ -17,6 +17,9 @@ target_include_directories(argon_gui PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 target_link_libraries(argon_gui PkgConfig::GTKMM)
 target_include_directories(argon_gui PUBLIC PkgConfig::GTKMM)
+target_link_libraries(argon_gui Beast::Beast)
+target_link_libraries(argon_gui argon_download)
+target_link_libraries(argon_gui argon_download_scheduler)
 
 target_compile_options(argon_gui
                        INTERFACE
