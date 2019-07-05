@@ -1,4 +1,3 @@
-hunter_add_package(nlohmann_json)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 if (nlohmann_json_FOUND)

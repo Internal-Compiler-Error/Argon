@@ -16,7 +16,7 @@ class download_scheduler
 public:
   void add_download(const download&);
   void add_download(download&&);
-  //  template <typename T>
+
   void                       add_download(const std::string&);
   static download_scheduler& get_instance();
   net::io_context&           get_a_io_context();

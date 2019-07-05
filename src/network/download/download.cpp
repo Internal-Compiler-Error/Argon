@@ -1,7 +1,7 @@
 #include "download.hpp"
 
 #include <boost/beast.hpp>
-#include <network/uri.hpp>
+//#include <network/uri.hpp>
 
 #include <algorithm>
 #include <iterator>

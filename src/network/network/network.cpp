@@ -12,11 +12,6 @@
 #include "network.hpp"
 using namespace std;
 
-namespace beast = boost::beast;
-namespace http  = beast::http;
-namespace net   = boost::asio;
-namespace ssl   = net::ssl;
-using tcp       = net::ip::tcp;
 
 namespace network = Argon::network;
 
@@ -108,7 +103,7 @@ bool network::can_be_accelerated(std::string_view url)
 bool Argon::network::can_be_accelerated(const std::string& url)
 {
   net::io_context ioc;
-  can_be_accelerated(url, ioc);
+  return can_be_accelerated(url, ioc);
 }
 bool Argon::network::can_be_accelerated(std::string_view url, boost::asio::io_context& ioc)
 {

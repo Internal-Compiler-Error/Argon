@@ -1,4 +1,5 @@
 #include "download_scheduler.hpp"
+#include "../network/network.hpp" // todo: apart from this thing works, I am DISGUSTED BY IT!
 
 #include <boost/beast.hpp>
 #include <thread>
@@ -48,15 +49,26 @@ void download_scheduler::add_download(const download& download)
 // template <typename T>
 void download_scheduler::add_download(const std::string& link)
 {
-  //  auto length            = get_content_lenth();
-  //  int  each_section_size = length / io_contexts.size();
-  //
-  //  for (auto i = 0; i != io_contexts.size(); ++i)
-  //  {
-  //    flat_buffer                       buf;
-  //    http::request<http::dynamic_body> request;
-  //    request.set(http::field::range, std::to_string(each_section_size * (i + 1)));
-  //  }
+
+  auto head   = network::details::get_final_dest_HEAD(link, get_a_io_context());
+  auto length = get_content_lenth(head);
+
+  auto remainder         = length % io_contexts.size();
+  auto each_section_size = (length - remainder) / io_contexts.size();
+
+  for (auto i = 0; i != io_contexts.size(); ++i)
+  {
+    flat_buffer                       buf;
+    http::request<http::dynamic_body> request;
+    if (i == io_contexts.size() - 1)
+    {
+      request.set(http::field::range, std::to_string(each_section_size * (i + 1) + remainder));
+    }
+    else
+    {
+      request.set(http::field::range, std::to_string(each_section_size * (i + 1)));
+    }
+  }
 }
 
 void download_scheduler::add_download(download&& download)

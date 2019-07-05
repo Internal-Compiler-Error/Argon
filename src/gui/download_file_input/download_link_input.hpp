@@ -20,7 +20,6 @@ public:
   download_link_input(const download_link_input&) = delete;
   download_link_input(download_link_input&&)      = delete;
 
-protected:
 private:
   Gtk::VBox   box;
   Gtk::HBox   button_box_;

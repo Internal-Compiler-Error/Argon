@@ -18,7 +18,7 @@ target_include_directories(argon_gui PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 target_link_libraries(argon_gui PkgConfig::GTKMM)
 target_include_directories(argon_gui PUBLIC PkgConfig::GTKMM)
-target_link_libraries(argon_gui Beast::Beast)
+
 target_link_libraries(argon_gui network)
 target_link_libraries(argon_gui argon_download)
 target_link_libraries(argon_gui argon_download_scheduler)
@@ -26,7 +26,7 @@ target_link_libraries(argon_gui argon_download_scheduler)
 target_compile_options(argon_gui
         INTERFACE
         -Wall
-        -Werror # treat all warnings as errors
+        #        -Werror # treat all warnings as errors
         -Wextra # reasonable and standard
         -Wshadow # warn the user if a variable declaration shadows one from a parent context
         -Wnon-virtual-dtor # warn the user if a class with virtual functions has a non-virtual destructor. This helps catch hard to track down memory errors

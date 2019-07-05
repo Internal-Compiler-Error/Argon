@@ -5,11 +5,10 @@ set(Boost_USE_STATIC_LIBS FLASE)
 set(Boost_USE_MULTITHREADED TRUE)
 set(Boost_USE_STATIC_RUNTIME FALSE)
 set(Boost_ADDITIONAL_VERSIONS ${BOOST_VERSION})
-hunter_add_package(Boost COMPONENTS system)
 
 
 # Search for Boost Libraries
-find_package(Boost CONFIG REQUIRED system)
+find_package(Boost 1.70 REQUIRED COMPONENTS system)
 
 # Make Boost globally available
 if (Boost_FOUND)

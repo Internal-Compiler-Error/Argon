@@ -28,8 +28,6 @@ namespace Argon::gui {
 class argon_app : public Gtk::ApplicationWindow
 {
   static std::shared_ptr<argon_app> instance;
-  //  template <class T, class... Args>
-  //  friend std::shared_ptr<T> std::make_shared(Args&&... args);
 
 public:
   static std::shared_ptr<argon_app> get_instance();
@@ -44,9 +42,6 @@ public:
 
   const argon_app& operator=(const argon_app&& rhs) = delete;
   argon_app(const argon_app&& rhs)                  = delete;
-
-public:
-  //    void add_work();
 
 private:
   Gtk::VBox box; // top level container
@@ -73,7 +68,6 @@ private:
   Gtk::CellRendererProgress    cell_renderer_progress;
 
 public:
-  //  std::vector<net::io_context> cxt_pool; // a pool of net::io_context equalling the amount of hardware threads
   network::download_scheduler& scheduler;
 };
 } // namespace Argon::gui
