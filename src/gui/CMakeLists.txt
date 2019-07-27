@@ -2,17 +2,18 @@ add_library(argon_gui STATIC "")
 
 target_sources(argon_gui
         PRIVATE
-        argon_app/argon_app.cpp
-        download_columns/download_columns.cpp
-        download_file_chooser/download_file_chooser.cpp
-        download_file_input/download_link_input.cpp
-        download_not_supported_dialog/download_not_supported_dialog.cpp
+        argon_app.cpp
+        download_columns.cpp
+        download_file_chooser.cpp
+        download_link_input.cpp
+        download_not_supported_dialog.cpp
         PUBLIC
-        argon_app/argon_app.hpp
-        download_columns/download_columns.hpp
-        download_file_chooser/download_file_chooser.hpp
-        download_file_input/download_link_input.hpp
-        download_not_supported_dialog/download_not_supported_dialog.hpp)
+        argon_app.hpp
+        download_columns.hpp
+        download_file_chooser.hpp
+        download_link_input.hpp
+        download_not_supported_dialog.hpp
+        )
 
 target_include_directories(argon_gui PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
@@ -20,13 +21,13 @@ target_link_libraries(argon_gui PkgConfig::GTKMM)
 target_include_directories(argon_gui PUBLIC PkgConfig::GTKMM)
 
 target_link_libraries(argon_gui network)
-target_link_libraries(argon_gui argon_download)
-target_link_libraries(argon_gui argon_download_scheduler)
+#target_link_libraries(argon_gui argon_download)
+#target_link_libraries(argon_gui argon_download_scheduler)
 
 target_compile_options(argon_gui
         INTERFACE
         -Wall
-        #        -Werror # treat all warnings as errors
+        #                -Werror # treat all warnings as errors
         -Wextra # reasonable and standard
         -Wshadow # warn the user if a variable declaration shadows one from a parent context
         -Wnon-virtual-dtor # warn the user if a class with virtual functions has a non-virtual destructor. This helps catch hard to track down memory errors

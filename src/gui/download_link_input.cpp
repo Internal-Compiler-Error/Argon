@@ -1,11 +1,9 @@
 #include "download_link_input.hpp"
-#include "../../network/network/network.hpp" // todo: fix the disgusting relative path to something provided by cmake
-#include "argon_app/argon_app.hpp"
-#include "download_not_supported_dialog/download_not_supported_dialog.hpp"
+#include "../network/download.hpp"
+#include "../network/network.hpp" // todo: fix the disgusting relative path to something provided by cmake
+#include "argon_app.hpp"
 
 #include <iostream>
-#include <regex>
-#include <type_traits>
 
 #include <gtkmm/messagedialog.h>
 
@@ -13,7 +11,7 @@ using namespace Argon::gui;
 using namespace Argon;
 using namespace std;
 
-download_link_input::download_link_input() : confirm_{"confirm"}, cancel_{"cancel"}
+download_link_input::download_link_input() : confirm_{ "confirm" }, cancel_{ "cancel" }
 {
   auto screen = Gdk::Screen::get_default();
   set_size_request(screen->get_width() / 4, screen->get_height() / 4);
@@ -36,12 +34,12 @@ download_link_input::download_link_input() : confirm_{"confirm"}, cancel_{"cance
 
     if (network::can_be_accelerated(text))
     {
+      network::download d{ text };
+      argon_app::get_instance()->scheduler.add_download(d);
     }
     else
     {
-      //      cout << response << '\n';
-      //      cout << "on confirm\n";
-      argon_app::get_instance()->scheduler.add_download(network::download{text});
+      //      argon_app::get_instance()->scheduler.add_download(network::download{text});
     }
   });
 

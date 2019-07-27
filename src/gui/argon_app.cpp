@@ -1,14 +1,13 @@
 #include "argon_app.hpp"
 
-#include "download_file_chooser/download_file_chooser.hpp"
-#include "download_file_input/download_link_input.hpp"
+#include "download_file_chooser.hpp"
+#include "download_link_input.hpp"
 
 #include <gtkmm/aboutdialog.h>
 #include <gtkmm/filechooserdialog.h>
 
 #include <gtkmm/main.h>
 #include <memory>
-#include <thread>
 #include <vector>
 //#include "../network/download_scheduler/download_scheduler.hpp"
 
@@ -20,12 +19,12 @@ shared_ptr<argon_app> argon_app::instance;
 
 argon_app::argon_app()
     : ApplicationWindow{},
-      download{"download"},
-      submenu_new_download{"new download"},
-      submenu_new_download_by_url{"new download by url"},
-      about{"about"},
-      submenu_about_about{"about"},
-      scheduler{network::download_scheduler::get_instance()}
+      download{ "download" },
+      submenu_new_download{ "new download" },
+      submenu_new_download_by_url{ "new download by url" },
+      about{ "about" },
+      submenu_about_about{ "about" },
+      scheduler{ network::download_scheduler::get_instance() }
 {
   // set up basic size
   set_title("Argon Downloader");
@@ -52,7 +51,7 @@ argon_app::argon_app()
 
     about_dialog.set_logo(Gdk::Pixbuf::create_from_file("logo.jpg", 200, 400));
 
-    about_dialog.set_authors(std::vector<Glib::ustring>{"Bill Wang"});
+    about_dialog.set_authors(std::vector<Glib::ustring>{ "Bill Wang" });
 
     about_dialog.set_copyright("Bill Wang");
     about_dialog.set_license_type(Gtk::LICENSE_GPL_2_0);
@@ -72,7 +71,7 @@ argon_app::argon_app()
   });
 
   submenu_new_download.signal_activate().connect([&]() {
-    FileChooserDialog dialog{"please select a file", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER};
+    FileChooserDialog dialog{ "please select a file", Gtk::FILE_CHOOSER_ACTION_SELECT_FOLDER };
     dialog.set_transient_for(*this);
     dialog.run();
   });
@@ -110,9 +109,6 @@ argon_app::argon_app()
 }
 std::shared_ptr<argon_app> argon_app::get_instance()
 {
-  if (!instance)
-  {
-    instance = make_shared<argon_app>();
-  }
+  if (!instance) { instance = make_shared<argon_app>(); }
   return instance;
 }
