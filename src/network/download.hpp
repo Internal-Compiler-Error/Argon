@@ -80,7 +80,7 @@ namespace Argon::network
     std::string  target_path_;
 
   public:
-    const std::string& get_target_path() const;
+    [[nodiscard]] const std::string& get_target_path() const;
     void               set_target_path(const std::string& target_path);
 
   public:

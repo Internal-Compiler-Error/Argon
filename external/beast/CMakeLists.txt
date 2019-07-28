@@ -1,5 +1,5 @@
 add_library(boost_beast INTERFACE)
-find_path(BOOST_BEAST_INCLUDE_DIR NAMES beast/core.hpp beast/ssl.hpp beast/http.hpp)
+find_path(BOOST_BEAST_INCLUDE_DIR beast/core.hpp beast/ssl.hpp beast/http.hpp)
 target_include_directories(boost_beast INTERFACE ${BOOST_BEAST_INCLUDE_DIR})
 target_link_libraries(boost_beast INTERFACE OpenSSL::SSL)
 target_link_libraries(boost_beast INTERFACE OpenSSL::Crypto)

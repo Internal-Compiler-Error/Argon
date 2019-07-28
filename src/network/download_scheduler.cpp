@@ -53,7 +53,7 @@ void download_scheduler::add_download(const download& download)
   const long each_size  = (total_size - total_size % io_context_pool_size) / io_context_pool_size;
   const long remainder  = total_size % io_context_pool_size;
 
-  for (auto i = 0; i < io_context_pool_size; ++i)
+  for (auto i = 0; i < 1; ++i)
   {
     auto future = std::async(std::launch::async, [&]() {
       auto&                  ioc = get_an_io_context();

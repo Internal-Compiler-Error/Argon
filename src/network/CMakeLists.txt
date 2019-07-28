@@ -17,9 +17,9 @@ target_sources(network
 target_link_libraries(network PUBLIC boost_beast)
 
 target_compile_options(network
-        INTERFACE
+        PRIVATE
         -Wall
-        -Werror # treat all warnings as errors
+        # -Werror # treat all warnings as errors
         -Wextra # reasonable and standard
         -Wshadow # warn the user if a variable declaration shadows one from a parent context
         -Wnon-virtual-dtor # warn the user if a class with virtual functions has a non-virtual destructor. This helps

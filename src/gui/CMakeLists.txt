@@ -21,8 +21,6 @@ target_link_libraries(argon_gui PkgConfig::GTKMM)
 target_include_directories(argon_gui PUBLIC PkgConfig::GTKMM)
 
 target_link_libraries(argon_gui network)
-#target_link_libraries(argon_gui argon_download)
-#target_link_libraries(argon_gui argon_download_scheduler)
 
 target_compile_options(argon_gui
         INTERFACE

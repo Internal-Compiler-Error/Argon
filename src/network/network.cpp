@@ -3,13 +3,8 @@
 #include <iostream>
 #include <regex>
 
-#include <boost/asio/connect.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/ssl/error.hpp>
-#include <boost/asio/ssl/stream.hpp>
+#include <boost/beast.hpp>
 #include <boost/beast/core.hpp>
-#include <boost/beast/core/detect_ssl.hpp>
-#include <boost/beast/http.hpp>
 #include <boost/beast/ssl.hpp>
 
 using namespace std;
@@ -53,38 +48,7 @@ namespace
         "Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe\n"
         "vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep\n"
         "+OkuE6N36B9K\n"
-        "-----END CERTIFICATE-----\n"
-        "-----BEGIN CERTIFICATE-----\n"
-        "MIIDaDCCAlCgAwIBAgIJAO8vBu8i8exWMA0GCSqGSIb3DQEBCwUAMEkxCzAJBgNV\n"
-        "BAYTAlVTMQswCQYDVQQIDAJDQTEtMCsGA1UEBwwkTG9zIEFuZ2VsZXNPPUJlYXN0\n"
-        "Q049d3d3LmV4YW1wbGUuY29tMB4XDTE3MDUwMzE4MzkxMloXDTQ0MDkxODE4Mzkx\n"
-        "MlowSTELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAkNBMS0wKwYDVQQHDCRMb3MgQW5n\n"
-        "ZWxlc089QmVhc3RDTj13d3cuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUA\n"
-        "A4IBDwAwggEKAoIBAQDJ7BRKFO8fqmsEXw8v9YOVXyrQVsVbjSSGEs4Vzs4cJgcF\n"
-        "xqGitbnLIrOgiJpRAPLy5MNcAXE1strVGfdEf7xMYSZ/4wOrxUyVw/Ltgsft8m7b\n"
-        "Fu8TsCzO6XrxpnVtWk506YZ7ToTa5UjHfBi2+pWTxbpN12UhiZNUcrRsqTFW+6fO\n"
-        "9d7xm5wlaZG8cMdg0cO1bhkz45JSl3wWKIES7t3EfKePZbNlQ5hPy7Pd5JTmdGBp\n"
-        "yY8anC8u4LPbmgW0/U31PH0rRVfGcBbZsAoQw5Tc5dnb6N2GEIbq3ehSfdDHGnrv\n"
-        "enu2tOK9Qx6GEzXh3sekZkxcgh+NlIxCNxu//Dk9AgMBAAGjUzBRMB0GA1UdDgQW\n"
-        "BBTZh0N9Ne1OD7GBGJYz4PNESHuXezAfBgNVHSMEGDAWgBTZh0N9Ne1OD7GBGJYz\n"
-        "4PNESHuXezAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCmTJVT\n"
-        "LH5Cru1vXtzb3N9dyolcVH82xFVwPewArchgq+CEkajOU9bnzCqvhM4CryBb4cUs\n"
-        "gqXWp85hAh55uBOqXb2yyESEleMCJEiVTwm/m26FdONvEGptsiCmF5Gxi0YRtn8N\n"
-        "V+KhrQaAyLrLdPYI7TrwAOisq2I1cD0mt+xgwuv/654Rl3IhOMx+fKWKJ9qLAiaE\n"
-        "fQyshjlPP9mYVxWOxqctUdQ8UnsUKKGEUcVrA08i1OAnVKlPFjKBvk+r7jpsTPcr\n"
-        "9pWXTO9JrYMML7d+XRSZA1n3856OqZDX4403+9FnXCvfcLZLLKTBvwwFgEFGpzjK\n"
-        "UEVbkhd5qstF6qWK\n"
-        "-----END CERTIFICATE-----\n";
-    /*  This is the GeoTrust root certificate.
-
-        CN = GeoTrust Global CA
-        O = GeoTrust Inc.
-        C = US
-        Valid to: Friday, ‎May ‎20, ‎2022 9:00:00 PM
-
-        Thumbprint(sha1):
-        ‎de 28 f4 a4 ff e5 b9 2f a3 c5 03 d1 a3 49 a7 f9 96 2a 82 12
-    */
+        "-----END CERTIFICATE-----";
     ;
 
     ctx.add_certificate_authority(boost::asio::buffer(cert.data(), cert.size()), ec);
@@ -111,7 +75,7 @@ namespace
     regex url_pattern{ R"(^((http[s]?|ftp):\/\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?$)" };
 
     smatch matches;
-    bool   valid = regex_search(url, matches, url_pattern);
+    regex_search(url, matches, url_pattern);
 
     //    if (!valid) { throw network::invalid_uri{}; }
     //    else
@@ -149,19 +113,29 @@ namespace
       beast::flat_buffer buf;
 
       // set up ssl certificates
-      ssl::context ctx{ ssl::context::tlsv12_client };
+      ssl::context ctx{ ssl::context::tls_client };
 
       load_root_certificates(ctx, e);
+      //      ctx.set_verify_mode(ssl::verify_peer);
+      ctx.set_default_verify_paths();
 
       // form a stream to carry out data
       beast::ssl_stream<beast::tcp_stream> ssl_stream{ ioc, ctx };
+
+      if (!SSL_set_tlsext_host_name(ssl_stream.native_handle(), uri.host.c_str()))
+      {
+        beast::error_code ec{ static_cast<int>(::ERR_get_error()), net::error::get_ssl_category() };
+        throw beast::system_error{ ec };
+      }
 
       // get the actual endpoint of the target
       auto const address = resolver.resolve(uri.host, "https");
 
       // connect to it
       beast::get_lowest_layer(ssl_stream).connect(address);
+
       ssl_stream.handshake(ssl::stream_base::client);
+
       beast::http::write(ssl_stream, request);
 
       beast::http::response_parser<beast::http::empty_body> res; // HEAD request has no body
@@ -178,9 +152,10 @@ namespace
         // see this:
         // https://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error I'm
         // not an expert either but hey the test passes! (exception& e){
-        cerr << "**********EXCEPTION CAUGHT***********\n";
-        cerr << e.what() << '\n';
-        cerr << "they say it's fine that some company don't properly shut down the connection\n";
+        clog << "**********EXCEPTION CAUGHT***********\n";
+        clog << e.what() << '\n';
+        clog << "Some say it's fine that some company don't properly shut down the connection\n";
+        clog << "**********CATCH BLOCK ENDS***********\n";
       }
 
       return res.release(); // revert control to the caller
@@ -210,13 +185,15 @@ namespace
       }
       catch (std::exception& e)
       {
-        cerr << "**********EXCEPTION CAUGHT***********\n";
+        clog << "**********EXCEPTION CAUGHT***********\n";
         cout << e.what() << '\n';
+        clog << "**********CATCH BLOCK ENDS***********\n";
       }
-      catch (beast::error_code& e)
+      catch (beast::system_error& e)
       {
-        cerr << "**********EXCEPTION CAUGHT***********\n";
-        cout << e.message() << '\n';
+        clog << "**********EXCEPTION CAUGHT***********\n";
+        cout << e.what() << '\n';
+        clog << "**********CATCH BLOCK ENDS***********\n";
       }
       return res.release();
     }

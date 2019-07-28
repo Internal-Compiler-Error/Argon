@@ -34,5 +34,5 @@ TEST(network_cpp, get_final_address_works)
 int main(int argc, char* argv[])
 {
   testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  for (auto i = 0; i < 100; ++i) { auto ret = RUN_ALL_TESTS(); }
 }

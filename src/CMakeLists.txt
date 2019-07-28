@@ -4,6 +4,7 @@ add_executable(Argon main.cpp)
 
 target_link_libraries(Argon PRIVATE argon_gui)
 add_compile_options(
+        PRIVATE
         -Wall
         #                -Werror # treat all warnings as errors
         -Wextra # reasonable and standard
