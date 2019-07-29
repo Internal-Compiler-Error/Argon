@@ -9,7 +9,6 @@
 #include <gtkmm/main.h>
 #include <memory>
 #include <vector>
-//#include "../network/download_scheduler/download_scheduler.hpp"
 
 using namespace Argon::gui;
 using namespace Gtk;
@@ -26,7 +25,7 @@ argon_app::argon_app()
       submenu_about_about{ "about" },
       scheduler{ network::download_scheduler::get_instance() }
 {
-  // set up basic size
+  // set up basic size_
   set_title("Argon Downloader");
   //    set_icon(Gdk::Pixbuf::create_from_file("logo.jpg", 200, 400));
   resize(800, 400);
@@ -86,7 +85,7 @@ argon_app::argon_app()
 
   // create columns for main display
   view.append_column("index_", columns.index_);
-  view.append_column("link_", columns.link_);
+  view.append_column("location_", columns.link_);
   view.append_column("ip_", columns.ip_);
   view.append_column("protocol", columns.protocol_);
   view.append_column("target_", columns.target_);

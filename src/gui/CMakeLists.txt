@@ -38,5 +38,7 @@ target_compile_options(argon_gui
         -Wsign-conversion # warn on sign conversions
         -Wnull-dereference # warn if a null dereference is detected
         -Wdouble-promotion # warn if float is implicit promoted to double
+        #        -Wfloat-equal # warn if == or != is used on floating points
+        #        -Wfloat-overflow-conversion #
         -Wformat=2 # warn on security issues around functions that format output (ie printf)
         )

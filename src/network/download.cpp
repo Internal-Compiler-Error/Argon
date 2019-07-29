@@ -8,6 +8,15 @@
 
 #include <boost/beast.hpp>
 
+namespace beast = boost::beast;
+namespace http  = beast::http;
+namespace net   = boost::asio;
+namespace ssl   = net::ssl;
+using tcp       = net::ip::tcp;
+
+namespace net = boost::asio;
+using namespace boost::beast;
+
 using json = nlohmann::json;
 using namespace Argon::network;
 using namespace std;
@@ -17,7 +26,10 @@ namespace
   unsigned  index_g{};
   conn_type str_to_conn_type(const string& str)
   {
-    if (str == "https"s) { return conn_type::https; }
+    if (str == "https"s)
+    {
+      return conn_type::https;
+    }
     else if (str == "http"s)
     {
       return conn_type::http;
@@ -33,6 +45,7 @@ namespace
   }
 } // namespace
 
+// equally operators can be simplified by the introduction of the spaceship <=> operator in C++20
 bool download::operator==(download const& rhs) const
 {
   return index_ == rhs.index_ && link_ == rhs.link_ && ip_ == rhs.ip_ && protocol_ == rhs.protocol_ &&
@@ -75,11 +88,11 @@ void download::set_target(std::string const& target)
 {
   target_ = target;
 }
-unsigned int download::get_progress() const
+double download::get_progress() const
 {
   return progress_;
 }
-void download::set_progress(unsigned int progress)
+void download::set_progress(double progress) noexcept
 {
   progress_ = progress;
 }
@@ -102,12 +115,17 @@ void Argon::network::from_json(const nlohmann::json& j, download& d)
   j.at("target").get_to(d.target_);
   j.at("progress").get_to(d.progress_);
 }
-download::download(const std::string& str) noexcept(false) : index_{ ++index_g }
+download::download(const std::string& str, std::size_t sub_download_count, boost::asio::io_context& ioc) noexcept(false)
+    : index_{ ++index_g }, original_request_url_{ str }, ioc_{ ioc }
 {
-  net::io_context ioc;
-  auto            final_url = network::get_final_address(str, ioc);
-  regex  url_pattern{ R"(^((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?$)" };
-  smatch matches;
+  using namespace boost::beast;
+  namespace ssl = boost::asio::ssl;
+  namespace net = boost::asio;
+
+  const auto  final_url = network::get_final_address(str, ioc_);
+  const auto  head      = network::get_HEAD(str, ioc_);
+  const regex url_pattern{ R"(^((http[s]?|ftp):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?$)" };
+  smatch      matches;
 
   regex_match(final_url, matches, url_pattern);
 
@@ -116,6 +134,20 @@ download::download(const std::string& str) noexcept(false) : index_{ ++index_g }
   target_      = matches[6];
   host_        = matches[3];
   target_path_ = matches[4].str() + matches[6].str();
+  size_        = std::stoul(head.at(http::field::content_length).to_string());
+
+  for (std::size_t i = 0; i != sub_download_count; ++i)
+  {
+    using http::field;
+    http::request<http::string_body> req;
+    req.set(field::host, host_);
+    req.version(11);
+    req.method(http::verb::get);
+    req.target(target_path_);
+    req.set(field::user_agent, "Argon");
+
+    req.set(http::field::range, form_range_header(each_size * i, each_size * (i + 1)));
+  }
 }
 download::download() : index_{ ++index_g } {}
 
@@ -124,13 +156,13 @@ download::download(const http::response<T>& response)
 {
   link_ = response.at(http::field::host) + response.at(http::field::location);
 }
-const string& download::get_raw_uri() const
+const string& download::get_original_request_url() const
 {
-  return raw_uri;
+  return original_request_url_;
 }
-void download::set_raw_uri(const string& raw_uri)
+void download::set_original_request_url_(const string& original_request_url)
 {
-  download::raw_uri = raw_uri;
+  download::original_request_url_ = original_request_url;
 }
 const string& download::get_ip() const
 {
@@ -156,3 +188,31 @@ void download::set_target_path(const string& target_path)
 {
   target_path_ = target_path;
 }
+void download::set_original_request_url(const string& original_request_url)
+{
+  original_request_url_ = original_request_url;
+}
+size_t download::get_size() const
+{
+  return size_;
+}
+void download::set_size(size_t size)
+{
+  download::size_ = size;
+}
+size_t download::get_downloaded() const
+{
+  return downloaded_;
+}
+void download::set_downloaded(size_t downloaded)
+{
+  downloaded_ = downloaded;
+}
+
+// basic_sub_download::basic_sub_download(boost::asio::io_context& ioc,
+//                           std::string_view         host,
+//                           std::string_view         target_path,
+//                           std::string_view         location,
+//                           std::size_t              size,
+//                           conn_type                protocol)
+//    :ioc_{ioc} {}

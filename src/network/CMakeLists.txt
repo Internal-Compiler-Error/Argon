@@ -8,11 +8,14 @@ target_sources(network
         download.hpp
         download_scheduler.hpp
         network.hpp
+        download_handler.hpp
         PRIVATE
         download.cpp
         download_scheduler.cpp
         network.cpp
+        download_handler.cpp
         )
+target_include_directories(network INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 
 target_link_libraries(network PUBLIC boost_beast)
 

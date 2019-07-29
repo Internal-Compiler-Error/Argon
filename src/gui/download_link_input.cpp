@@ -11,6 +11,26 @@ using namespace Argon::gui;
 using namespace Argon;
 using namespace std;
 
+namespace
+{
+
+  const std::string WHITESPACE = " \n\r\t\f\v";
+
+  std::string ltrim(const std::string& s)
+  {
+    size_t start = s.find_first_not_of(WHITESPACE);
+    return (start == std::string::npos) ? "" : s.substr(start);
+  }
+
+  std::string rtrim(const std::string& s)
+  {
+    size_t end = s.find_last_not_of(WHITESPACE);
+    return (end == std::string::npos) ? "" : s.substr(0, end + 1);
+  }
+
+  std::string trim(const std::string& s) { return rtrim(ltrim(s)); }
+} // namespace
+
 download_link_input::download_link_input() : confirm_{ "confirm" }, cancel_{ "cancel" }
 {
   auto screen = Gdk::Screen::get_default();
@@ -31,10 +51,15 @@ download_link_input::download_link_input() : confirm_{ "confirm" }, cancel_{ "ca
     using namespace boost;
 
     std::string text = entry_.get_text();
+    text             = trim(text);
 
-    if (network::can_be_accelerated(text))
+    if (!network::is_valid_uri(text))
     {
-      network::download d{ text };
+      cerr << "try again\n";
+    }
+    else if (network::can_be_accelerated(text))
+    {
+      network::download d{ text }(<#initializer #>, 0);
       argon_app::get_instance()->scheduler.add_download(d);
     }
     else

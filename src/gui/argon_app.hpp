@@ -1,6 +1,6 @@
 #ifndef ARGON_ARGON_APP_HPP
 #define ARGON_ARGON_APP_HPP
-#include "../network/download_scheduler.hpp"
+#include "download_scheduler.hpp"
 
 #include <gtkmm/applicationwindow.h>
 #include <gtkmm/box.h>

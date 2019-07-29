@@ -1,5 +1,6 @@
 #include "network.hpp"
 
+#include <fstream>
 #include <iostream>
 #include <regex>
 
@@ -10,52 +11,15 @@
 using namespace std;
 using namespace Argon;
 
+namespace beast = boost::beast;
+namespace http  = beast::http;
+namespace net   = boost::asio;
+namespace ssl   = net::ssl;
+using tcp       = net::ip::tcp;
+
 namespace
 {
-  void load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
-  {
-    std::string const cert =
-        /*  This is the DigiCert root certificate.
-
-            CN = DigiCert High Assurance EV Root CA
-            OU = www.digicert.com
-            O = DigiCert Inc
-            C = US
-            Valid to: Sunday, ?November ?9, ?2031 5:00:00 PM
-
-            Thumbprint(sha1):
-            5f b7 ee 06 33 e2 59 db ad 0c 4c 9a e6 d3 8f 1a 61 c7 dc 25
-        */
-        "-----BEGIN CERTIFICATE-----\n"
-        "MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs\n"
-        "MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3\n"
-        "d3cuZGlnaWNlcnQuY29tMSswKQYDVQQDEyJEaWdpQ2VydCBIaWdoIEFzc3VyYW5j\n"
-        "ZSBFViBSb290IENBMB4XDTA2MTExMDAwMDAwMFoXDTMxMTExMDAwMDAwMFowbDEL\n"
-        "MAkGA1UEBhMCVVMxFTATBgNVBAoTDERpZ2lDZXJ0IEluYzEZMBcGA1UECxMQd3d3\n"
-        "LmRpZ2ljZXJ0LmNvbTErMCkGA1UEAxMiRGlnaUNlcnQgSGlnaCBBc3N1cmFuY2Ug\n"
-        "RVYgUm9vdCBDQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMbM5XPm\n"
-        "+9S75S0tMqbf5YE/yc0lSbZxKsPVlDRnogocsF9ppkCxxLeyj9CYpKlBWTrT3JTW\n"
-        "PNt0OKRKzE0lgvdKpVMSOO7zSW1xkX5jtqumX8OkhPhPYlG++MXs2ziS4wblCJEM\n"
-        "xChBVfvLWokVfnHoNb9Ncgk9vjo4UFt3MRuNs8ckRZqnrG0AFFoEt7oT61EKmEFB\n"
-        "Ik5lYYeBQVCmeVyJ3hlKV9Uu5l0cUyx+mM0aBhakaHPQNAQTXKFx01p8VdteZOE3\n"
-        "hzBWBOURtCmAEvF5OYiiAhF8J2a3iLd48soKqDirCmTCv2ZdlYTBoSUeh10aUAsg\n"
-        "EsxBu24LUTi4S8sCAwEAAaNjMGEwDgYDVR0PAQH/BAQDAgGGMA8GA1UdEwEB/wQF\n"
-        "MAMBAf8wHQYDVR0OBBYEFLE+w2kD+L9HAdSYJhoIAu9jZCvDMB8GA1UdIwQYMBaA\n"
-        "FLE+w2kD+L9HAdSYJhoIAu9jZCvDMA0GCSqGSIb3DQEBBQUAA4IBAQAcGgaX3Nec\n"
-        "nzyIZgYIVyHbIUf4KmeqvxgydkAQV8GK83rZEWWONfqe/EW1ntlMMUu4kehDLI6z\n"
-        "eM7b41N5cdblIZQB2lWHmiRk9opmzN6cN82oNLFpmyPInngiK3BD41VHMWEZ71jF\n"
-        "hS9OMPagMRYjyOfiZRYzy78aG6A9+MpeizGLYAiJLQwGXFK3xPkKmNEVX58Svnw2\n"
-        "Yzi9RKR/5CYrCsSXaQ3pjOLAEFe4yHYSkVXySGnYvCoCWw9E1CAx2/S6cCZdkGCe\n"
-        "vEsXCS+0yx5DaMkHJ8HSXPfqIbloEpw8nL+e/IBcm2PN7EeqJSdnoDfzAIJ9VNep\n"
-        "+OkuE6N36B9K\n"
-        "-----END CERTIFICATE-----";
-    ;
-
-    ctx.add_certificate_authority(boost::asio::buffer(cert.data(), cert.size()), ec);
-    if (ec) return;
-  }
-
-  inline bool is_https(string const& str) { return str.substr(0, 5) == "https"s; }
+  inline bool is_https(string const& str) { return str.substr(0, 5) == "https"; }
   enum class connection_type
   {
     http,
@@ -85,7 +49,10 @@ namespace
 
     string destination{ matches[4].str() + matches[6].str() };
 
-    if (is_https(url)) { return uri{ host, destination, connection_type::https }; }
+    if (is_https(url))
+    {
+      return uri{ host, destination, connection_type::https };
+    }
     else
     {
       return uri{ host, destination, connection_type::http };
@@ -115,7 +82,7 @@ namespace
       // set up ssl certificates
       ssl::context ctx{ ssl::context::tls_client };
 
-      load_root_certificates(ctx, e);
+      network::load_root_certificate(ctx, e);
       //      ctx.set_verify_mode(ssl::verify_peer);
       ctx.set_default_verify_paths();
 
@@ -138,24 +105,32 @@ namespace
 
       beast::http::write(ssl_stream, request);
 
-      beast::http::response_parser<beast::http::empty_body> res; // HEAD request has no body
-      res.skip(true);                                            // tell the parser to skip body
+      http::response_parser<beast::http::empty_body> res; // HEAD request has no body
+      res.skip(true);                                     // tell the parser to skip body
 
       http::read(ssl_stream, buf, res); // read data
 
       try
       {
-        ssl_stream.shutdown();
+        ssl_stream.shutdown(e);
+        if (e == net::error::eof)
+        {
+          // see this:
+          // https://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error
+          // I'm not an expert either but hey the test passes!
+          clog << "not a real error \n";
+          clog << e.message();
+
+          e = {};
+        }
+        if (e)
+        {
+          throw beast::system_error{ e };
+        }
       }
       catch (exception& e)
       {
-        // see this:
-        // https://stackoverflow.com/questions/25587403/boost-asio-ssl-async-shutdown-always-finishes-with-an-error I'm
-        // not an expert either but hey the test passes! (exception& e){
-        clog << "**********EXCEPTION CAUGHT***********\n";
         clog << e.what() << '\n';
-        clog << "Some say it's fine that some company don't properly shut down the connection\n";
-        clog << "**********CATCH BLOCK ENDS***********\n";
       }
 
       return res.release(); // revert control to the caller
@@ -189,12 +164,6 @@ namespace
         cout << e.what() << '\n';
         clog << "**********CATCH BLOCK ENDS***********\n";
       }
-      catch (beast::system_error& e)
-      {
-        clog << "**********EXCEPTION CAUGHT***********\n";
-        cout << e.what() << '\n';
-        clog << "**********CATCH BLOCK ENDS***********\n";
-      }
       return res.release();
     }
   }
@@ -222,9 +191,9 @@ http::response<http::empty_body> network::get_HEAD(const std::string& target, ne
 {
   auto head = get_current_HEAD(target, ioc);
 
-  // 302 means resource found but redirect is needed
   // cursively look for any more redirects, until a final destination is found
-  if (head.result_int() == 302)
+  if (const auto& result = head.result(); result == http::status::found || result == http::status::permanent_redirect ||
+                                          result == http::status::temporary_redirect)
   {
     string location = head.at(http::field::location).to_string();
     return get_HEAD(location, ioc);
@@ -238,8 +207,8 @@ std::string network::get_final_address(const std::string& redirected_location, n
 {
   auto head = get_current_HEAD(redirected_location, ioc);
 
-  // 302 means redirect
-  if (head.result_int() == 302)
+  if (const auto& result = head.result(); result == http::status::found || result == http::status::permanent_redirect ||
+                                          result == http::status::temporary_redirect)
   {
     auto new_location = head.at(http::field::location).to_string();
     return get_final_address(new_location, ioc);
@@ -248,4 +217,23 @@ std::string network::get_final_address(const std::string& redirected_location, n
   {
     return redirected_location;
   }
+}
+void network::load_root_certificate(ssl::context& ctx, boost::system::error_code& ec)
+{
+  std::ifstream     root_certificate{ "root_certificate.pem", std::ios::in };
+  std::stringstream ss;
+  ss << root_certificate.rdbuf();
+  std::string cert2;
+  ss >> cert2;
+
+  ctx.add_certificate_authority(boost::asio::buffer(cert2.data(), cert2.size()), ec);
+  if (ec)
+  {
+    return;
+  }
+}
+bool network::is_valid_uri(const std::string& str)
+{
+  regex pattern{ R"(^((http[s]?|ftp):\/\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?$)" };
+  return regex_match(str, pattern);
 }

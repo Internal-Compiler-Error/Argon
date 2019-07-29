@@ -1,26 +1,58 @@
 #include "download_scheduler.hpp"
-#include "network.hpp" // todo: apart from this thing works, I am DISGUSTED BY IT!
+#include "download_handler.hpp"
+#include "network.hpp"
 
 #include <boost/beast.hpp>
 #include <iostream>
+#include <limits>
+#include <memory>
 #include <thread>
+
+namespace beast = boost::beast;
+namespace http  = beast::http;
+namespace net   = boost::asio;
+namespace ssl   = net::ssl;
+using tcp       = net::ip::tcp;
+
+namespace net = boost::asio;
+using namespace boost::beast;
+
 using namespace Argon::network;
 using namespace boost::beast;
 namespace net = boost::asio;
 
 download_scheduler download_scheduler::instance{};
 
-template <typename T>
-inline size_t get_content_length(const http::response<T>& res)
+namespace
 {
-  std::stringstream ss;
-  ss << res.base().at(http::field::content_length);
-  size_t ret;
-  ss >> ret;
-  return ret;
-}
+  std::string size_t_to_string(std::size_t size)
+  {
+    std::stringstream ss;
+    ss << size;
+    return ss.str();
+  }
 
-int download_scheduler::next_available_ctx()
+  inline std::string form_range_header(std::size_t begin, std::size_t end)
+  {
+    const std::string bytes  = "bytes=";
+    const auto        begin_ = size_t_to_string(begin);
+    const auto        end_   = size_t_to_string(end);
+    return bytes + begin_ + "-" + end_;
+  }
+
+  template <typename T>
+  inline size_t get_content_length(const http::response<T>& res)
+  {
+    std::stringstream ss;
+    ss << res.base().at(http::field::content_length);
+    size_t ret;
+    ss >> ret;
+    return ret;
+  }
+
+} // namespace
+
+size_t download_scheduler::next_available_ctx()
 {
   if (current_io_context == std::thread::hardware_concurrency())
   {
@@ -33,7 +65,7 @@ int download_scheduler::next_available_ctx()
   }
 }
 
-Argon::network::download_scheduler::download_scheduler() : io_contexts{ std::thread::hardware_concurrency() } {}
+Argon::network::download_scheduler::download_scheduler() : io_contexts_{ std::thread::hardware_concurrency() } {}
 
 download_scheduler& download_scheduler::get_instance()
 {
@@ -41,52 +73,41 @@ download_scheduler& download_scheduler::get_instance()
 }
 net::io_context& download_scheduler::get_an_io_context()
 {
-  return io_contexts[next_available_ctx()];
+  return io_contexts_[next_available_ctx()];
 }
-void download_scheduler::add_download(const download& download)
+void download_scheduler::add_download(download& download)
 {
   using http::field;
-  const long io_context_pool_size = std::thread::hardware_concurrency();
 
-  const auto head       = network::get_HEAD(download.get_raw_uri(), get_an_io_context());
-  const long total_size = std::stol(head.at(http::field::content_length).to_string());
-  const long each_size  = (total_size - total_size % io_context_pool_size) / io_context_pool_size;
-  const long remainder  = total_size % io_context_pool_size;
+  // all the autos are size_t
+  const auto io_context_pool_size = std::thread::hardware_concurrency();
+  auto&      ioc                  = get_an_io_context();
+  const auto head                 = network::get_HEAD(download.get_link(), ioc);
+  const auto total_size           = get_content_length(head);
 
-  for (auto i = 0; i < 1; ++i)
+  const auto each_size = (total_size - total_size % io_context_pool_size) / io_context_pool_size;
+  //  const long remainder  = total_size % io_context_pool_size;
+
+  for (size_t i = 0; i < io_context_pool_size; ++i)
   {
-    auto future = std::async(std::launch::async, [&]() {
-      auto&                  ioc = get_an_io_context();
-      net::ip::tcp::resolver resolver{ ioc };
-      const auto             address = resolver.resolve(download.get_link());
 
-      http::request<http::empty_body> req;
-      req.set(field::host, download.get_host());
-      req.version(11);
-      req.method(http::verb::get);
-      req.target(download.get_target_path());
-      req.set(field::user_agent, "Argon");
+    const auto&       host = download.get_host();
+    beast::error_code e;
 
-      std::stringstream ss;
+    // form http request
+    http::request<http::string_body> req;
+    req.set(field::host, host);
+    req.version(11);
+    req.method(http::verb::get);
+    req.target(download.get_target_path());
+    req.set(field::user_agent, "Argon");
 
-      ss << each_size * (i + 1);
-      std::string begin;
-      ss >> begin;
-      ss << each_size * (i + 2);
-      std::string end;
-      ss >> end;
-      req.set(http::field::range, begin + std::string{ "-" } + end);
+    req.set(http::field::range, form_range_header(each_size * i, each_size * (i + 1)));
 
-      beast::flat_buffer buf;
-      beast::tcp_stream  stream{ ioc };
-      stream.connect(address);
+    auto handler = std::make_shared<download_handler<http::string_body>>(ioc, std::move(req), download.is_https());
 
-      http::write(stream, req);
-
-      http::response_parser<http::string_body> res;
-      http::read(stream, buf, res);
-      std::cout << res.release();
-    });
+    std::thread t{ [=]() { handler->start(); } };
+    t.join();
   }
 
   downloads.push_back(download);
@@ -94,5 +115,9 @@ void download_scheduler::add_download(const download& download)
 
 void download_scheduler::add_download(download&& download)
 {
-  downloads.push_back(std::move(download));
+  using network::download;
+
+  class download download_ = std::move(download);
+
+  downloads.push_back(std::move(download_));
 }
