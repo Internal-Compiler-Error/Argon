@@ -2,6 +2,8 @@
 #define ARGON_ARGON_APP_HPP
 #include "download_scheduler.hpp"
 
+#include <boost/asio.hpp>
+#include <boost/beast.hpp>
 #include <gtkmm/applicationwindow.h>
 #include <gtkmm/box.h>
 #include <gtkmm/cellrendererprogress.h>
@@ -12,12 +14,8 @@
 #include <gtkmm/menuitem.h>
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/treeview.h>
-
 #include <iostream>
 #include <vector>
-
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
 
 namespace net = boost::asio;
 
@@ -26,14 +24,14 @@ namespace net = boost::asio;
 
 namespace Argon::gui
 {
-  class argon_app : public Gtk::ApplicationWindow
-  {
+class argon_app : public Gtk::ApplicationWindow
+{
     static std::shared_ptr<argon_app> instance;
 
-  public:
+public:
     static std::shared_ptr<argon_app> get_instance();
 
-  public:
+public:
     argon_app();
     ~argon_app() override = default;
 
@@ -44,7 +42,7 @@ namespace Argon::gui
     const argon_app& operator=(const argon_app&& rhs) = delete;
     argon_app(const argon_app&& rhs)                  = delete;
 
-  private:
+private:
     // top level container
     Gtk::VBox box;
 
@@ -71,8 +69,8 @@ namespace Argon::gui
     download_columns             columns;
     Gtk::CellRendererProgress    cell_renderer_progress;
 
-  public:
+public:
     network::download_scheduler& scheduler;
-  };
+};
 } // namespace Argon::gui
 #endif // ARGON_ARGON_APP_HPP
